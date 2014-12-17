@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<object
+    name="portal_controlpanel"
+    xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+    i18n:domain="ploneintranet">
+
+    <configlet
+        title="Docconv Client Settings"
+        action_id="ploneintranet.docconv.client.docconvsettings"
+        appId="ploneintranet.docconv.client"
+        category="Products"
+        condition_expr=""
+        url_expr="string:${portal_url}/@@docconv-client-controlpanel"
+        icon_expr="string:${portal_url}/++resource++ploneintranet.docconv.client/icon.png"
+        visible="True"
+        i18n:attributes="title">
+            <permission>Manage portal</permission>
+    </configlet>
+
+</object>

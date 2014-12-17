@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """Setup/installation tests for this package."""
 
+import unittest2 as unittest
 from ploneintranet.docconv.client.testing import IntegrationTestCase
+from ploneintranet.docconv.client.controlpanel import async_methods
 from plone import api
 
 
@@ -28,3 +30,8 @@ class TestInstall(IntegrationTestCase):
         from ploneintranet.docconv.client.interfaces import IPloneintranetDocconvClientLayer
         from plone.browserlayer import utils
         self.failUnless(IPloneintranetDocconvClientLayer in utils.registered_layers())
+
+    def test_control_panel(self):
+        self.assertEqual(
+            async_methods.by_token.keys(),
+            ['', 'plone.app.async'])
