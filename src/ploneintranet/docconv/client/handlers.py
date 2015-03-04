@@ -10,7 +10,7 @@ from zope.lifecycleevent.interfaces import IObjectAddedEvent
 from zope.lifecycleevent.interfaces import IObjectModifiedEvent
 
 from ploneintranet.docconv.client.interfaces import IDocconv
-from ploneintranet.docconv.client.async import queueDelayedConversionJob
+from ploneintranet.docconv.client.async import queueConversionJob
 from ploneintranet.docconv.client.exceptions import ConfigError
 from ploneintranet.docconv.client.fetcher import fetchPreviews
 from ploneintranet.docconv.client.config import (
@@ -39,7 +39,7 @@ def _update_preview_images(obj, event):
         del annotations[PDF_VERSION_KEY]
     if PREVIEW_MESSAGE_KEY in annotations:
         del annotations[PREVIEW_MESSAGE_KEY]
-    success = queueDelayedConversionJob(obj, obj.REQUEST)
+    success = queueConversionJob(obj, obj.REQUEST)
     if not success:
         try:
             fetchPreviews(obj)

@@ -11,6 +11,7 @@ from tempfile import mkdtemp
 from BeautifulSoup import BeautifulSoup
 from PIL import Image
 
+from collective.celery import task
 from plone.app.blob.field import FileField
 from plone.app.blob.field import ImageField
 from Products.ATContentTypes.interfaces import IATDocument
@@ -363,6 +364,7 @@ class DocumentPreviewFetcher(HtmlPreviewFetcher, grok.Adapter):
     grok.context(IATDocument)
 
 
+@task()
 def fetchPreviews(context, virtual_url_parts=[], vr_path=''):
     """ calls the docconv service and stores pdf and preview images on the
     object """
