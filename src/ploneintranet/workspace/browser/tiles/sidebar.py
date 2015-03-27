@@ -1,3 +1,4 @@
+from AccessControl import Unauthorized
 from DateTime import DateTime
 from plone import api
 from plone.app.contenttypes.interfaces import IEvent
@@ -41,7 +42,9 @@ class BaseTile(BrowserView):
             item.id = idnormalizer.normalize(item.message)
         return m
 
-    def my_workspace(self):
+    def workspace(self):
+        """ Acquire the workspace of the current context
+        """
         return parent_workspace(self)
 
 
@@ -63,7 +66,7 @@ class SidebarSettingsMembers(BaseTile):
         existing_user_ids = [x['id'] for x in existing_users]
 
         # Only add search results that are not already members
-        sharing = getMultiAdapter((self.my_workspace(), self.request),
+        sharing = getMultiAdapter((self.workspace(), self.request),
                                   name='sharing')
         search_results = sharing.user_search_results()
         users = existing_users + [x for x in search_results
@@ -74,7 +77,7 @@ class SidebarSettingsMembers(BaseTile):
 
     @memoize
     def existing_users(self):
-        return existing_users(self.my_workspace())
+        return existing_users(self.workspace())
 
 
 class SidebarSettingsSecurity(BaseTile):
@@ -95,8 +98,7 @@ class SidebarSettingsSecurity(BaseTile):
         """ write attributes, if any, set state, render
         """
         form = self.request.form
-
-        ws = self.my_workspace()
+        ws = self.workspace()
 
         def update_field(field_name):
             index = int(form.get(field_name)) - 1
@@ -114,11 +116,16 @@ class SidebarSettingsSecurity(BaseTile):
                     'success',
                 )
 
-        if self.request.method == 'POST' and form:
-            for field in [
-                'external_visibility', 'join_policy', 'participant_policy'
-            ]:
-                update_field(field)
+        if self.request.method == 'POST':
+            if not ws.can_manage_workspace():
+                msg = _(u'You do not have permission to change the workspace '
+                        u'policy')
+                raise Unauthorized(msg)
+            if form:
+                for field in [
+                    'external_visibility', 'join_policy', 'participant_policy'
+                ]:
+                    update_field(field)
 
         return self.render()
 
@@ -157,9 +164,11 @@ class Sidebar(BaseTile):
         """ write attributes, if any, set state, render
         """
         form = self.request.form
+        ws = self.workspace()
 
-        if self.request.method == 'POST' and form:
-            ws = self.my_workspace()
+        if (self.request.method == 'POST'
+                and form
+                and ws.can_manage_workspace()):
             if self.request.form.get('section', None) == 'task':
                 current_tasks = self.request.form.get('current-tasks', [])
                 active_tasks = self.request.form.get('active-tasks', [])
@@ -198,6 +207,10 @@ class Sidebar(BaseTile):
                                             self.request,
                                             'success')
 
+        elif not ws.can_manage_workspace() and self.request.method == 'POST':
+            msg = _(u'You do not have permission to change the workspace title'
+                    u' or description')
+            raise Unauthorized(msg)
         return self.render()
 
     # ContentItems
