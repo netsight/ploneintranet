@@ -268,26 +268,28 @@ class StatusActivityProvider(AbstractActivityProvider):
             status_id=self.status.getId(),
         )
         for item in items:
+            urls = []
             item_url = '/'.join((base_url, item.getId()))
             docconv = IDocconv(item)
             if docconv.has_thumbs():
-                url = '/'.join((item_url, 'thumb'))
+                for i in range(docconv.get_number_of_pages()):
+                    urls.append('{0}/thumb?page={1}'.format(item_url, i - 1))
             elif isinstance(item, Image):
                 images = api.content.get_view(
                     'images',
                     item.aq_base,
                     self.request,
                 )
-                url = '/'.join((
+                urls = ['/'.join((
                     item_url,
                     images.scale(scale='preview').url.lstrip('/')
-                ))
+                ))]
             else:
                 # We need a better fallback image. See #See #122
-                url = '/'.join((
+                urls = ['/'.join((
                     api.portal.get().absolute_url(),
-                    '++theme++ploneintranet.theme/generated/media/logo.svg'))
-            if url:
+                    '++theme++ploneintranet.theme/generated/media/logo.svg'))]
+            for url in urls:
                 attachments.append(dict(img_src=url, link=item_url))
         return attachments
 

@@ -23,6 +23,7 @@ class StatusAttachments(BrowserView):
 
         if not request.path:
             return
+        self.page = int(self.request.get('page', 1))
         self.status_id = request.path.pop()
         self.status_id = int(self.status_id)
         if not request.path:
@@ -76,8 +77,13 @@ class StatusAttachments(BrowserView):
             docconv = IDocconv(attachment)
             if self.preview_type == 'thumb':
                 if docconv.has_thumbs():
+                    thumbs = docconv.get_thumbs()
+                    if self.page - 1 >= len(thumbs):
+                        self.page = 0
+                    elif self.page < 1:
+                        self.page = 1
                     return self._prepare_imagedata(
-                        attachment, docconv.get_thumbs()[0])
+                        attachment, thumbs[self.page - 1])
             elif self.preview_type == 'preview':
                 if docconv.has_previews():
                     return self._prepare_imagedata(
