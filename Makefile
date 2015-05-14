@@ -4,6 +4,10 @@ LATEST          = $(shell cat LATEST)
 BUNDLENAME      = ploneintranet
 BUNDLEURL	= https://products.syslab.com/packages/$(BUNDLENAME)/$(LATEST)/$(BUNDLENAME)-$(LATEST).tar.gz
 
+# Add help text after each target name starting with ' \#\# '
+help:
+	@grep " ## " $(MAKEFILE_LIST) | grep -v MAKEFILE_LIST | sed 's/\([^:]*\).*##/\1\t/'
+
 all:: fetchrelease
 default: all
 clean:
@@ -11,11 +15,9 @@ clean:
 check-clean:
 	test -z "$(shell git status --porcelain)" || (git status && echo && echo "Workdir not clean." && false) && echo "Workdir clean."
 
-fetchrelease:
-	# update LATEST in case we updated the prototype
+fetchrelease: ## Download and install the latest javascript bundle into the theme.
 	$(eval LATEST := $(shell cat LATEST))
 	$(eval BUNDLEURL := https://products.syslab.com/packages/$(BUNDLENAME)/$(LATEST)/$(BUNDLENAME)-$(LATEST).tar.gz)
-	echo $(BUNDLEURL)
 	# fetch non-git-controlled required javascript resources
 	@[ -d $(DIAZO_DIR)/bundles/ ] || mkdir -p $(DIAZO_DIR)/bundles/
 	@curl $(BUNDLEURL) -o $(DIAZO_DIR)/bundles/$(BUNDLENAME)-$(LATEST).tar.gz
@@ -29,7 +31,7 @@ fetchrelease:
 ## Setup
 ## You don't run these rules unless you're a prototype dev
 
-prototype::
+prototype:: ## Get the latest version of the prototype
 	@if [ ! -d "prototype" ]; then \
 		git clone https://github.com/ploneintranet/ploneintranet.prototype.git prototype; \
 	else \
@@ -40,8 +42,7 @@ prototype::
 jekyll: prototype
 	@cd prototype && make jekyll
 
-diazorelease: diazo
-	# commit changes, including removals
+diazorelease: diazo ## Run 'diazo' and commit all changes to the generated theme, including removals
 	git add --all $(DIAZO_DIR)
 	@echo "=========================="
 	@git status
@@ -51,7 +52,7 @@ diazorelease: diazo
 	@sleep 10
 	git commit -a -m "protoype release $(shell cat LATEST)"
 
-diazo: jekyll fetchrelease _diazo
+diazo: jekyll fetchrelease _diazo ## Generate the theme with jekyll and copy it to src/ploneintranet/theme/static/generated
 _diazo:
 	# --- (1) --- prepare clean release dir
 	@rm -rf ${RELEASE_DIR} && mkdir -p ${RELEASE_DIR}
@@ -63,7 +64,7 @@ _diazo:
 	# html templates referenced in rules.xml - second cut preserves subpath eg open-market-committee/index.html
 	# point js sourcing to registered resource and rewrite all other generated sources to point to diazo dir
 	for file in `grep generated $(DIAZO_DIR)/../rules.xml | cut -f2 -d\" | cut -f2- -d/`; do \
-		sed -i -e 's#src=".*ploneintranet.js"#src="++theme++ploneintranet.theme/generated/bundles/$(BUNDLENAME).min.js"#' $(RELEASE_DIR)/$$file; \
+		sed -i -e 's#src=".*ploneintranet.js"#src="++theme++ploneintranet.theme/generated/bundles/$(BUNDLENAME).js"#' $(RELEASE_DIR)/$$file; \
 		sed -i -e 's#http://demo.ploneintranet.net/#++theme++ploneintranet.theme/generated/#g' $(RELEASE_DIR)/$$file; \
 		mkdir -p `dirname $(DIAZO_DIR)/$$file`; \
 		cp $(RELEASE_DIR)/$$file $(DIAZO_DIR)/$$file; \
@@ -75,20 +76,22 @@ _diazo:
 	@[ -d $(DIAZO_DIR)/media/ ] || mkdir $(DIAZO_DIR)/media/
 	cp $(RELEASE_DIR)/media/logo*.svg $(DIAZO_DIR)/media/
 
-# full js development refresh
-jsdev: bundle diazo _jsdev
+jsdev: dev-bundle diazo _jsdev ## full js development refresh
 
 # fast replace ploneintranet-dev.js - requires diazo to have run!
 _jsdev:
-	# replace minfied js bundle with dev bundle, directly in diazo theme dir
-	cp prototype/bundles/$(BUNDLENAME)-dev.js $(DIAZO_DIR)/bundles/
-	sed -i -e 's#$(BUNDLENAME).min.js#$(BUNDLENAME)-dev.js#' $(DIAZO_DIR)/*.html
+	# replace normal js bundle with dev bundle, directly in diazo theme dir
+	cp prototype/bundles/$(BUNDLENAME)-dev.js $(DIAZO_DIR)/bundles/ploneintranet.js
+
+dev-bundle: prototype
+	cd prototype && make dev-bundle
 
 bundle: prototype
 	cd prototype && make bundle
 
 jsrelease: prototype
 	cd prototype && make jsrelease
+	cp prototype/LATEST .
 
 
 ####################################################################
@@ -105,6 +108,7 @@ docker-run:
 	docker.io run -i -t \
                 --net=host \
                 -v $(SSH_AUTH_SOCK):/tmp/auth.sock \
+                -v $(HOME)/.buildout:/.buildout \
                 -v /var/tmp:/var/tmp \
                 -v $(HOME)/.bashrc:/.bashrc \
                 -v $(HOME)/.gitconfig:/.gitconfig \
@@ -122,7 +126,7 @@ docker-run:
 # Guido's lazy targets
 
 devel: bin/buildout
-	bin/buildout -c dev.cfg
+	bin/buildout
 
 bin/buildout: bin/python2.7
 	@bin/python bootstrap.py
@@ -137,14 +141,14 @@ bin/python2.7:
 # inspect robot traceback:
 # bin/robot-server ploneintranet.suite.testing.PLONEINTRANET_SUITE_ROBOT
 # firefox localhost:55001/plone
-test-robot:
+test-robot: ## Run robot tests with a virtual X server
 	Xvfb :99 1>/dev/null 2>&1 & HOME=/app DISPLAY=:99 bin/test -t 'robot' -x
 	@ps | grep Xvfb | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null
 
-test-norobot:
+test-norobot: ## Run all tests apart from robot tests
 	bin/test -t '!robot' -x
 
-test: 
+test: ## Run all tests, including robot tests with a virtual X server
 	Xvfb :99 1>/dev/null 2>&1 & HOME=/app DISPLAY=:99 bin/test -x
 	@ps | grep Xvfb | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null
 
