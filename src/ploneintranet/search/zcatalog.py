@@ -97,7 +97,7 @@ class ZCatalogSiteSearch(object):
         """
         pass
 
-    def query(keywords, facets=None, start_date=datetime.min,
+    def query(self, keywords, facets=None, start_date=datetime.min,
               end_date=datetime.max, start=0, step=None):
         """
         Query the catalog using passing facets as kwargs
