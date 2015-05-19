@@ -10,3 +10,4 @@ Component Packages
     invitations
     filepreviews
     pagerank
+    async
